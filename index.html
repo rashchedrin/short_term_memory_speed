@@ -97,6 +97,14 @@
             top: 20px;
             right: 20px;
             z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .language-label {
+            font-weight: bold;
+            color: var(--text-color);
         }
 
         .language-selector select {
@@ -173,6 +181,7 @@
                 position: static;
                 margin-bottom: 20px;
                 text-align: right;
+                justify-content: flex-end;
             }
 
             .stats {
@@ -209,6 +218,7 @@
 </head>
 <body>
     <div class="language-selector">
+        <span class="language-label">Language:</span>
         <select id="languageSelect" onchange="changeLanguage()">
             <option value="en">English</option>
             <option value="es">Español</option>
