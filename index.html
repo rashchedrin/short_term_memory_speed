@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Memory Sequence Experiment</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        #displayArea {
+            font-size: 48px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+        }
+        .config-section {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+        .stats {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        input {
+            padding: 5px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-section">
+        <h3>Configuration</h3>
+        <div>
+            <label>Display Duration (ms): </label>
+            <input type="number" id="displayDuration" value="1000" min="1">
+        </div>
+        <div>
+            <label>Gap Duration (ms): </label>
+            <input type="number" id="gapDuration" value="500" min="1">
+        </div>
+        <div>
+            <label>Sequence Length: </label>
+            <input type="number" id="sequenceLength" value="2" min="1" max="26">
+        </div>
+    </div>
+
+    <div id="displayArea"></div>
+    
+    <div>
+        <button id="runButton" onclick="startExperiment()">Run</button>
+    </div>
+
+    <div>
+        <input type="text" id="userInput" placeholder="Enter the sequence you saw" onkeydown="handleInputKeydown(event)">
+        <button id="checkButton" onclick="checkSequence()" disabled>Check</button>
+    </div>
+
+    <div class="stats">
+        <p>Successes: <span id="successCount">0</span></p>
+        <p>Fails: <span id="failCount">0</span></p>
+        <p>Success Rate: <span id="successRate">0</span>%</p>
+    </div>
+
+    <script>
+        // Global state variables
+        const g_stats = {
+            successes: 0,
+            fails: 0
+        };
+
+        let g_currentSequence = '';
+        let g_isExperimentRunning = false;
+
+        // Constants
+        const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        /**
+         * Generates a random sequence of specified length using available letters
+         * @param {number} length - The length of sequence to generate
+         * @returns {string} Random sequence of letters
+         */
+        function generateRandomSequence(length) {
+            assert(length > 0, `Expected positive length, got ${length}`);
+            assert(length <= LETTERS.length, 
+                   `Expected length <= ${LETTERS.length}, got ${length}`);
+
+            const letters = LETTERS.slice(0, length).split('');
+            // Fisher-Yates shuffle
+            for (let i = letters.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [letters[i], letters[j]] = [letters[j], letters[i]];
+            }
+            return letters.join('');
+        }
+
+        /**
+         * Updates the statistics display
+         */
+        function updateStats() {
+            document.getElementById('successCount').textContent = g_stats.successes;
+            document.getElementById('failCount').textContent = g_stats.fails;
+            const total = g_stats.successes + g_stats.fails;
+            const rate = total === 0 ? 0 : (g_stats.successes / total * 100).toFixed(1);
+            document.getElementById('successRate').textContent = rate;
+        }
+
+        /**
+         * Displays a letter for specified duration and returns actual display time
+         * @param {string} letter - Single letter to display
+         * @param {number} duration - Duration in milliseconds
+         * @returns {Promise<number>} Actual display duration in milliseconds
+         */
+        async function displayLetter(letter, duration) {
+            assert(letter.length === 1, `Expected single letter, got ${letter}`);
+            assert(duration > 0, `Expected positive duration, got ${duration}`);
+
+            const displayArea = document.getElementById('displayArea');
+            const startTime = performance.now();
+            displayArea.textContent = letter;
+            
+            await new Promise(resolve => setTimeout(resolve, duration));
+            
+            displayArea.textContent = '';
+            return performance.now() - startTime;
+        }
+
+        /**
+         * Starts the experiment sequence
+         */
+        async function startExperiment() {
+            if (g_isExperimentRunning) return;
+            g_isExperimentRunning = true;
+
+            const displayDuration = parseInt(document.getElementById('displayDuration').value);
+            const gapDuration = parseInt(document.getElementById('gapDuration').value);
+            const sequenceLength = parseInt(document.getElementById('sequenceLength').value);
+
+            assert(displayDuration > 0, `Expected positive display duration, got ${displayDuration}`);
+            assert(gapDuration > 0, `Expected positive gap duration, got ${gapDuration}`);
+            assert(sequenceLength > 0 && sequenceLength <= LETTERS.length, 
+                   `Expected sequence length between 1 and ${LETTERS.length}, got ${sequenceLength}`);
+
+            document.getElementById('runButton').disabled = true;
+            document.getElementById('userInput').value = '';
+            document.getElementById('checkButton').disabled = true;
+
+            g_currentSequence = generateRandomSequence(sequenceLength);
+
+            for (let i = 0; i < g_currentSequence.length; i++) {
+                await displayLetter(g_currentSequence[i], displayDuration);
+                if (i < g_currentSequence.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, gapDuration));
+                }
+            }
+
+            document.getElementById('checkButton').disabled = false;
+            document.getElementById('runButton').disabled = false;
+            g_isExperimentRunning = false;
+        }
+
+        /**
+         * Handles keydown events on the input field
+         * @param {KeyboardEvent} event - The keyboard event
+         */
+        function handleInputKeydown(event) {
+            if (event.key === 'Enter' && !document.getElementById('checkButton').disabled) {
+                checkSequence();
+            }
+        }
+
+        /**
+         * Checks the user's input against the displayed sequence
+         */
+        function checkSequence() {
+            const userInput = document.getElementById('userInput').value.toUpperCase();
+            if (userInput === g_currentSequence) {
+                g_stats.successes++;
+            } else {
+                g_stats.fails++;
+            }
+            updateStats();
+            document.getElementById('checkButton').disabled = true;
+            document.getElementById('userInput').value = '';
+        }
+
+        /**
+         * Simple assertion function for runtime checks
+         * @param {boolean} condition - Condition to check
+         * @param {string} message - Error message if condition fails
+         */
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(`Assertion failed: ${message}`);
+            }
+        }
+    </script>
+</body>
+</html> 
