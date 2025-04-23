@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Memory Sequence Experiment</title>
+    <title data-translate="title">Memory Sequence Experiment</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,6 +28,7 @@
             margin: 20px 0;
             padding: 10px;
             background-color: #f0f0f0;
+            position: relative;
         }
         button {
             padding: 10px 20px;
@@ -38,21 +39,82 @@
             padding: 5px;
             margin: 5px;
         }
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        details {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px;
+        }
+        details[open] summary {
+            margin-bottom: 10px;
+        }
+        .info-content {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        #resetButton {
+            position: absolute;
+            bottom: -40px;
+            right: 0;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #resetButton:hover {
+            background-color: #cc0000;
+        }
     </style>
 </head>
 <body>
+    <div class="language-selector">
+        <select id="languageSelect" onchange="changeLanguage()">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="ru">Русский</option>
+            <option value="zh">中文</option>
+            <option value="ja">日本語</option>
+        </select>
+    </div>
+
+    <details>
+        <summary data-translate="description_title">Description</summary>
+        <div class="info-content" data-translate="description">Loading...</div>
+    </details>
+
+    <details>
+        <summary data-translate="instructions_title">Instructions</summary>
+        <div class="info-content" data-translate="instructions">Loading...</div>
+    </details>
+
     <div class="config-section">
-        <h3>Configuration</h3>
+        <h3 data-translate="config_title">Configuration</h3>
         <div>
-            <label>Display Duration (ms): </label>
-            <input type="number" id="displayDuration" value="1000" min="1">
+            <label data-translate="display_duration">Display Duration (ms): </label>
+            <input type="number" id="displayDuration" value="300" min="1">
         </div>
         <div>
-            <label>Gap Duration (ms): </label>
-            <input type="number" id="gapDuration" value="500" min="1">
+            <label data-translate="gap_duration">Gap Duration (ms): </label>
+            <input type="number" id="gapDuration" value="300" min="1">
         </div>
         <div>
-            <label>Sequence Length: </label>
+            <label data-translate="sequence_length">Sequence Length: </label>
             <input type="number" id="sequenceLength" value="2" min="1" max="26">
         </div>
     </div>
@@ -60,20 +122,31 @@
     <div id="displayArea"></div>
     
     <div>
-        <button id="runButton" onclick="startExperiment()">Run</button>
+        <button id="runButton" onclick="startExperiment()" data-translate="run">Run</button>
     </div>
 
     <div>
-        <input type="text" id="userInput" placeholder="Enter the sequence you saw" onkeydown="handleInputKeydown(event)">
-        <button id="checkButton" onclick="checkSequence()" disabled>Check</button>
+        <input type="text" id="userInput" data-translate-placeholder="enter_sequence" placeholder="Loading..." onkeydown="handleInputKeydown(event)">
+        <button id="checkButton" onclick="checkSequence()" disabled data-translate="check">Check</button>
     </div>
 
     <div class="stats">
-        <p>Successes: <span id="successCount">0</span></p>
-        <p>Fails: <span id="failCount">0</span></p>
-        <p>Success Rate: <span id="successRate">0</span>%</p>
+        <div>
+            <span data-translate="successes">Successes:</span>
+            <span id="successCount">0</span>
+        </div>
+        <div>
+            <span data-translate="fails">Fails:</span>
+            <span id="failCount">0</span>
+        </div>
+        <div>
+            <span data-translate="success_rate">Success Rate:</span>
+            <span id="successRate">0%</span>
+        </div>
+        <button id="resetButton" data-translate="reset" onclick="resetStats()">Reset Statistics</button>
     </div>
 
+    <script src="translations/translations.js"></script>
     <script>
         // Global state variables
         const g_stats = {
@@ -83,9 +156,48 @@
 
         let g_currentSequence = '';
         let g_isExperimentRunning = false;
+        let g_currentLanguage = 'en';
 
         // Constants
         const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        /**
+         * Changes the current language and updates all translations
+         * @param {string} [lang] - Language code to switch to
+         */
+        function changeLanguage(lang) {
+            g_currentLanguage = lang || document.getElementById('languageSelect').value;
+            updateTranslations();
+        }
+
+        /**
+         * Updates all translatable elements with current language
+         */
+        function updateTranslations() {
+            const elements = document.querySelectorAll('[data-translate]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (key === 'instructions') {
+                    // Special handling for instructions that contain HTML
+                    element.innerHTML = TRANSLATIONS[g_currentLanguage][key];
+                } else {
+                    element.textContent = TRANSLATIONS[g_currentLanguage][key];
+                }
+            });
+
+            const placeholders = document.querySelectorAll('[data-translate-placeholder]');
+            placeholders.forEach(element => {
+                const key = element.getAttribute('data-translate-placeholder');
+                element.placeholder = TRANSLATIONS[g_currentLanguage][key];
+            });
+
+            document.title = TRANSLATIONS[g_currentLanguage]['title'];
+        }
+
+        // Initialize translations when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTranslations();
+        });
 
         /**
          * Generates a random sequence of specified length using available letters
@@ -114,7 +226,7 @@
             document.getElementById('failCount').textContent = g_stats.fails;
             const total = g_stats.successes + g_stats.fails;
             const rate = total === 0 ? 0 : (g_stats.successes / total * 100).toFixed(1);
-            document.getElementById('successRate').textContent = rate;
+            document.getElementById('successRate').textContent = rate + '%';
         }
 
         /**
@@ -182,11 +294,35 @@
         }
 
         /**
-         * Checks the user's input against the displayed sequence
+         * Normalizes a sequence string by removing separators and whitespace
+         * @param {string} sequence - The sequence to normalize
+         * @returns {string} Normalized sequence
+         */
+        function normalizeSequence(sequence) {
+            assert(typeof sequence === 'string', `Expected string, got ${typeof sequence}`);
+            
+            // Convert to uppercase
+            sequence = sequence.toUpperCase();
+            
+            // Remove common separators and whitespace
+            const separators = [' ', ',', ';', '-', '_', '.', '/', '\\', '|', "\'", "\""];
+            for (const sep of separators) {
+                sequence = sequence.replaceAll(sep, '');
+            }
+            
+            return sequence;
+        }
+
+        /**
+         * Checks if the user's input matches the displayed sequence
+         * Handles various input formats and separators
          */
         function checkSequence() {
-            const userInput = document.getElementById('userInput').value.toUpperCase();
-            if (userInput === g_currentSequence) {
+            const userInput = document.getElementById('userInput').value;
+            const normalizedInput = normalizeSequence(userInput);
+            const normalizedSequence = normalizeSequence(g_currentSequence);
+
+            if (normalizedInput === normalizedSequence) {
                 g_stats.successes++;
             } else {
                 g_stats.fails++;
@@ -194,6 +330,20 @@
             updateStats();
             document.getElementById('checkButton').disabled = true;
             document.getElementById('userInput').value = '';
+        }
+
+        /**
+         * Resets all statistics counters after confirmation
+         */
+        function resetStats() {
+            const currentLanguage = document.getElementById('languageSelect').value;
+            const confirmMessage = TRANSLATIONS[currentLanguage]['reset_confirm'];
+            
+            if (confirm(confirmMessage)) {
+                g_stats.successes = 0;
+                g_stats.fails = 0;
+                updateStats();
+            }
         }
 
         /**
